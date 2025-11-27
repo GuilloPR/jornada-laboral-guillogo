@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Calculadora de Jornada Laboral Semanal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#2563eb" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; padding: 20px; background: #f4f5fb; }
+    h1 { font-size: 22px; margin-bottom: 10px; }
+    p  { margin: 4px 0; }
+    .card {
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 14px;
+      max-width: 780px;
+      margin: 0 auto;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+    }
+    label { display: block; margin-top: 12px; font-weight: 600; font-size: 14px; }
+    input[type="number"], input[type="time"] {
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 1px solid #cbd5f5;
+      font-size: 14px;
+      width: 100%;
+      background: #f9fafb;
+    }
+    input[type="number"]:focus, input[type="time"]:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 1px rgba(37,99,235,0.35);
+      background: #ffffff;
+    }
+    .row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .row > div { flex: 1 1 180px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+      font-size: 14px;
+    }
+    th, td {
+      padding: 6px 4px;
+      text-align: center;
+    }
+    th {
+      background: #e5edff;
+      font-weight: 600;
+    }
+    tr:nth-child(even) td { background: #f9fbff; }
+    tr:nth-child(odd) td { background: #ffffff; }
+
+    .btn-primary {
+      margin-top: 18px;
+      width: 100%;
+      padding: 10px 12px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg,#2563eb,#4f46e5);
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.05s ease, box-shadow 0.1s ease, opacity 0.15s ease;
+      box-shadow: 0 8px 20px rgba(37,99,235,0.35);
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px rgba(37,99,235,0.4);
+    }
+    .btn-primary:active {
+      transform: translateY(0);
+      box-shadow: 0 4px 12px rgba(37,99,235,0.35);
+      opacity: 0.9;
+    }
+
+    .resultado {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-radius: 10px;
+      background: #ecfdf5;
+      border-left: 4px solid #16a34a;
+      color: #064e3b;
+      font-size: 14px;
+      line-height: 1.4;
+      white-space: pre-line;
+    }
+    .resultado strong { font-weight: 700; }
+
+    .alerta {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: #fef2f2;
+      border-left: 3px solid #dc2626;
+      color: #7f1d1d;
+      font-size: 13px;
+      display: none;
+      white-space: pre-line;
+    }
+    .alerta-exceso {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: #fffbeb;
+      border-left: 3px solid #f59e0b;
+      color: #78350f;
+      font-size: 13px;
+      display: none;
+      white-space: pre-line;
+    }
+    .small-hint {
+      font-size: 12px;
+      color: #6b7280;
+      margin-top: 2px;
+    }
+    .firma {
+      margin-top: 22px;
+      text-align: center;
+      font-size: 15px;
+      color: #111827;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .firma a {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #1d4ed8;
+      text-decoration: none;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(37, 99, 235, 0.06);
+      box-shadow: 0 0 0 rgba(37, 99, 235, 0.0);
+      transition: all 0.18s ease-out;
+    }
+    .firma a::before {
+      content: "𝕏";
+      font-size: 14px;
+    }
+    .firma a::after {
+      content: "";
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      bottom: 3px;
+      height: 2px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #2563eb, #4f46e5);
+      opacity: 0;
+      transform: scaleX(0.6);
+      transform-origin: center;
+      transition: all 0.18s ease-out;
+    }
+    .firma a:hover {
+      background: rgba(37, 99, 235, 0.12);
+      box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
+      transform: translateY(-1px);
+    }
+    .firma a:hover::after {
+      opacity: 1;
+      transform: scaleX(1);
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Calculadora de Jornada Laboral Semanal</h1>
+    <p style="font-size:13px;color:#4b5563;">
+      Regla base: <strong>35 horas semanales en semana completa (lunes a viernes)</strong>, con <strong>mínimo 5 horas
+      por día trabajado</strong>. Si hay feriados, ausencias justificadas u otros motivos por los que un día no se
+      trabaja, el objetivo se ajusta a <strong>7 horas por cada día marcado como trabajado</strong>.
+    </p>
+    <p class="small-hint">
+      Las horas "de más" que hayas hecho se usan para alivianar los últimos días de la semana: se prioriza que el
+      <strong>viernes</strong> quede en 5 horas; si todavía hay crédito, también el <strong>jueves</strong>, y así
+      sucesivamente.
+    </p>
+
+    <div class="row">
+      <div>
+        <label for="minimoDiario">Mínimo diario (horas)</label>
+        <input type="number" id="minimoDiario" min="1" max="12" value="5" />
+        <div class="small-hint">Tu regla actual: 5 hs mínimas por día trabajado.</div>
+      </div>
+    </div>
+
+    <h2 style="font-size:16px;margin-top:18px;">Semana actual</h2>
+    <p class="small-hint">Marcá por día si se trabaja o no. "Hoy" indica en qué día estás ahora.</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width:16%;">Día</th>
+          <th style="width:16%;">¿Se trabaja?</th>
+          <th style="width:12%;">Hoy</th>
+          <th>Entrada</th>
+          <th>Salida</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Lunes</td>
+          <td><input type="checkbox" id="trabaja1" checked /></td>
+          <td><input type="radio" name="hoy" value="1" /></td>
+          <td><input type="time" id="entrada1" /></td>
+          <td><input type="time" id="salida1" /></td>
+        </tr>
+        <tr>
+          <td>Martes</td>
+          <td><input type="checkbox" id="trabaja2" checked /></td>
+          <td><input type="radio" name="hoy" value="2" /></td>
+          <td><input type="time" id="entrada2" /></td>
+          <td><input type="time" id="salida2" /></td>
+        </tr>
+        <tr>
+          <td>Miércoles</td>
+          <td><input type="checkbox" id="trabaja3" checked /></td>
+          <td><input type="radio" name="hoy" value="3" /></td>
+          <td><input type="time" id="entrada3" /></td>
+          <td><input type="time" id="salida3" /></td>
+        </tr>
+        <tr>
+          <td>Jueves</td>
+          <td><input type="checkbox" id="trabaja4" checked /></td>
+          <td><input type="radio" name="hoy" value="4" /></td>
+          <td><input type="time" id="entrada4" /></td>
+          <td><input type="time" id="salida4" /></td>
+        </tr>
+        <tr>
+          <td>Viernes</td>
+          <td><input type="checkbox" id="trabaja5" checked /></td>
+          <td><input type="radio" name="hoy" value="5" /></td>
+          <td><input type="time" id="entrada5" /></td>
+          <td><input type="time" id="salida5" /></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <button class="btn-primary" onclick="calcular()">Calcular salida de hoy y horas pendientes</button>
+
+    <div id="alerta" class="alerta"></div>
+    <div id="resultado" class="resultado" style="display:none;"></div>
+
+    <div id="contadorBox" class="resultado" style="display:none;background:#eff6ff;border-left-color:#2563eb;color:#1e3a8a;">
+      <strong>Seguimiento en vivo de hoy</strong>
+
+      <span id="contadorTexto"></span>
+    </div>
+
+    <div id="alertaExceso" class="alerta-exceso"></div>
+
+    <p class="firma"><a href="https://x.com/Guillogo_" target="_blank">hecho por Guillogo</a></p>
+  </div>
+
+  <script>
+    let ultimaEntradaHoyMin = null;
+    let ultimaSugerenciaHoyMin = null;
+    let contadorInterval = null;
+
+    function parseTime(value) {
+      if (!value) return null;
+      const parts = value.split(":");
+      if (parts.length < 2) return null;
+      const h = Number(parts[0]);
+      const m = Number(parts[1]);
+      if (Number.isNaN(h) || Number.isNaN(m)) return null;
+      return h * 60 + m;
+    }
+
+    function minutesToHM(totalMinutes) {
+      const sign = totalMinutes < 0 ? "-" : "";
+      const abs = Math.abs(totalMinutes);
+      const h = Math.floor(abs / 60);
+      const m = abs % 60;
+      return sign + String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
+    }
+
+    function buildHoraSalidaStr(totalMinutes) {
+      const mod = ((totalMinutes % (24 * 60)) + (24 * 60)) % (24 * 60);
+      return minutesToHM(mod);
+    }
+
+    function actualizarContador() {
+      const box = document.getElementById("contadorBox");
+      const texto = document.getElementById("contadorTexto");
+      const alertaExceso = document.getElementById("alertaExceso");
+
+      if (ultimaEntradaHoyMin == null || ultimaSugerenciaHoyMin == null) {
+        box.style.display = "none";
+        alertaExceso.style.display = "none";
+        return;
+      }
+
+      const ahora = new Date();
+      const minutosAhora = ahora.getHours() * 60 + ahora.getMinutes();
+      let trabajadosHoy = minutosAhora - ultimaEntradaHoyMin;
+      if (trabajadosHoy < 0) trabajadosHoy = 0;
+
+      texto.textContent = `Llevás hoy: ${minutesToHM(trabajadosHoy)} (sugerido para hoy: ${minutesToHM(ultimaSugerenciaHoyMin)}).`;
+      box.style.display = "block";
+
+      const exceso = trabajadosHoy - ultimaSugerenciaHoyMin;
+      if (exceso > 5) { // más de 5 minutos por encima de lo sugerido
+        alertaExceso.style.display = "block";
+        alertaExceso.textContent = `Atención: ya superaste lo sugerido para hoy por ${minutesToHM(exceso)}. Podés ir pensando en cerrar la jornada si las tareas lo permiten.`;
+      } else {
+        alertaExceso.style.display = "none";
+        alertaExceso.textContent = "";
+      }
+    }
+
+    function iniciarContador() {
+      if (contadorInterval) clearInterval(contadorInterval);
+      if (ultimaEntradaHoyMin == null || ultimaSugerenciaHoyMin == null) return;
+      actualizarContador();
+      contadorInterval = setInterval(actualizarContador, 60000); // actualiza cada 60 segundos
+    }
+
+    function calcular() {
+      const alerta = document.getElementById("alerta");
+      const resultado = document.getElementById("resultado");
+      const alertaExceso = document.getElementById("alertaExceso");
+      const contadorBox = document.getElementById("contadorBox");
+
+      alerta.style.display = "none";
+      alerta.textContent = "";
+      resultado.style.display = "none";
+      resultado.textContent = "";
+      alertaExceso.style.display = "none";
+      alertaExceso.textContent = "";
+      contadorBox.style.display = "none";
+      ultimaEntradaHoyMin = null;
+      ultimaSugerenciaHoyMin = null;
+      if (contadorInterval) {
+        clearInterval(contadorInterval);
+        contadorInterval = null;
+      }
+
+      const minimoHoras = Number(document.getElementById("minimoDiario").value || 0);
+      if (!minimoHoras || minimoHoras <= 0) {
+        alerta.style.display = "block";
+        alerta.textContent = "Indicá un mínimo diario de horas válido (mayor a 0).";
+        return;
+      }
+      const minimoMin = minimoHoras * 60;
+
+      const diasTrabajados = [];
+      for (let i = 1; i <= 5; i++) {
+        if (document.getElementById("trabaja" + i).checked) {
+          diasTrabajados.push(i);
+        }
+      }
+      if (diasTrabajados.length === 0) {
+        alerta.style.display = "block";
+        alerta.textContent = "Marcá al menos un día como trabajado.";
+        return;
+      }
+
+      const hoyRadio = document.querySelector('input[name="hoy"]:checked');
+      if (!hoyRadio) {
+        alerta.style.display = "block";
+        alerta.textContent = "Marcá qué día es 'hoy'.";
+        return;
+      }
+
+      const indiceHoy = Number(hoyRadio.value);
+      if (!document.getElementById("trabaja" + indiceHoy).checked) {
+        alerta.style.display = "block";
+        alerta.textContent = "El día marcado como 'hoy' debe estar también marcado como trabajado.";
+        return;
+      }
+
+      const objetivoSemanalMin = diasTrabajados.length * 7 * 60;
+
+      let acumuladoHastaAyer = 0;
+      diasTrabajados.forEach(i => {
+        if (i < indiceHoy) {
+          const ent = parseTime(document.getElementById("entrada" + i).value);
+          const sal = parseTime(document.getElementById("salida" + i).value);
+          if (ent != null && sal != null && sal > ent) {
+            acumuladoHastaAyer += (sal - ent);
+          }
+        }
+      });
+
+      const entradaHoy = parseTime(document.getElementById("entrada" + indiceHoy).value);
+      if (entradaHoy == null) {
+        alerta.style.display = "block";
+        alerta.textContent = "Ingresá al menos la hora de entrada de hoy en el día marcado como 'hoy'.";
+        return;
+      }
+
+      let faltanteTeorico = objetivoSemanalMin - acumuladoHastaAyer;
+      let mensajeExtra = "";
+
+      if (faltanteTeorico <= 0) {
+        mensajeExtra = "Ya cumpliste o superaste el objetivo semanal solo con los días anteriores. Aun así, se respeta el mínimo diario para hoy.";
+        faltanteTeorico = 0;
+      }
+
+      const diasFuturos = diasTrabajados.filter(i => i > indiceHoy);
+      const baseFuturos = diasFuturos.length * minimoMin;
+
+      const faltanteParaObjetivo = Math.max(0, faltanteTeorico);
+
+      let sugeridoHoyMin;
+      if (faltanteParaObjetivo === 0) {
+        sugeridoHoyMin = minimoMin;
+      } else {
+        let requeridoHoy = faltanteParaObjetivo - baseFuturos;
+        if (requeridoHoy <= minimoMin) {
+          sugeridoHoyMin = minimoMin;
+        } else {
+          sugeridoHoyMin = requeridoHoy; // concentramos el extra en hoy para dejar últimos días livianos
+        }
+      }
+
+      const horaSalidaHoy = entradaHoy + sugeridoHoyMin;
+
+      ultimaEntradaHoyMin = entradaHoy;
+      ultimaSugerenciaHoyMin = sugeridoHoyMin;
+
+      const textoResultado =
+        `Objetivo semanal (según días trabajados): ${minutesToHM(objetivoSemanalMin)}
+` +
+        `Horas trabajadas hasta ayer: ${minutesToHM(acumuladoHastaAyer)}
+` +
+        `Horas faltantes antes de empezar hoy (teóricas): ${minutesToHM(objetivoSemanalMin - acumuladoHastaAyer)}
+
+` +
+        `Horas sugeridas para hoy: ${minutesToHM(sugeridoHoyMin)}
+` +
+        `Hora de salida estimada hoy: ${buildHoraSalidaStr(horaSalidaHoy)}` +
+        (mensajeExtra ? `
+
+Nota: ${mensajeExtra}` : "");
+
+      resultado.style.display = "block";
+      resultado.textContent = textoResultado;
+
+      iniciarContador();
+    }
+
+    // Registro básico de Service Worker para PWA (requiere archivo sw.js en la misma carpeta)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(err => {
+          console.log('No se pudo registrar el Service Worker:', err);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
