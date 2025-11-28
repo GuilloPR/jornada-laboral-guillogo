@@ -15,7 +15,7 @@
       background: #ffffff;
       padding: 20px;
       border-radius: 14px;
-      max-width: 780px;
+      max-width: 820px;
       margin: 0 auto;
       box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
     }
@@ -121,6 +121,70 @@
       color: #6b7280;
       margin-top: 2px;
     }
+
+    .progreso-container {
+      margin-top: 18px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: #eff6ff;
+      border-left: 4px solid #2563eb;
+      font-size: 13px;
+      color: #1d4ed8;
+    }
+    .progreso-labels {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+    .progreso-barra {
+      position: relative;
+      width: 100%;
+      height: 10px;
+      border-radius: 999px;
+      background: #dbeafe;
+      overflow: hidden;
+    }
+    .progreso-barra-inner {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 0%;
+      border-radius: 999px;
+      background: linear-gradient(90deg,#22c55e,#16a34a);
+      transition: width 0.25s ease-out;
+    }
+    .progreso-detalle {
+      margin-top: 6px;
+      font-size: 12px;
+      color: #1e3a8a;
+    }
+
+    .tabla-resumen {
+      margin-top: 16px;
+      font-size: 13px;
+    }
+    .tabla-resumen table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .tabla-resumen th,
+    .tabla-resumen td {
+      padding: 4px 6px;
+      border-bottom: 1px solid #e5e7eb;
+      text-align: center;
+    }
+    .tabla-resumen th {
+      background: #f3f4f6;
+      font-weight: 600;
+    }
+    .tabla-resumen .estado-real { color: #166534; }
+    .tabla-resumen .estado-sugerido { color: #1d4ed8; }
+    .tabla-resumen .estado-minimo { color: #6b7280; }
+    .tabla-resumen .estado-no { color: #9ca3af; }
+
     .firma {
       margin-top: 22px;
       text-align: center;
@@ -174,7 +238,7 @@
 </head>
 <body>
   <div class="card">
-    <h1>Calculadora de Jornada Laboral Semanal</h1>
+    <h1>Calculadora de Jornada Laboral Semanal ⏱️ <span style="font-size:12px;color:#6b7280;margin-left:8px;">v1.1</span></h1>
     <p style="font-size:13px;color:#4b5563;">
       Regla base: <strong>35 horas semanales en semana completa (lunes a viernes)</strong>, con <strong>mínimo 5 horas
       por día trabajado</strong>. Si hay feriados, ausencias justificadas u otros motivos por los que un día no se
@@ -194,7 +258,7 @@
       </div>
     </div>
 
-    <h2 style="font-size:16px;margin-top:18px;">Semana actual</h2>
+    <h2 style="font-size:16px;margin-top:18px;">Semana actual 📅</h2>
     <p class="small-hint">Marcá por día si se trabaja o no. "Hoy" indica en qué día estás ahora.</p>
 
     <table>
@@ -246,26 +310,41 @@
       </tbody>
     </table>
 
-    <button class="btn-primary" onclick="calcular()">Calcular salida de hoy y horas pendientes</button>
+    <div id="progreso" class="progreso-container">
+      <div class="progreso-labels">
+        <span>Progreso semanal ⏳</span>
+        <span id="progresoPorcentaje">0%</span>
+      </div>
+      <div class="progreso-barra">
+        <div id="progresoBarraInner" class="progreso-barra-inner"></div>
+      </div>
+      <div class="progreso-detalle" id="progresoDetalle"></div>
+    </div>
+
+    <button class="btn-primary" onclick="calcular()">Calcular salida de hoy y horas pendientes ✅</button>
 
     <div id="alerta" class="alerta"></div>
     <div id="resultado" class="resultado" style="display:none;"></div>
 
     <div id="contadorBox" class="resultado" style="display:none;background:#eff6ff;border-left-color:#2563eb;color:#1e3a8a;">
       <strong>Seguimiento en vivo de hoy</strong>
-
-      <span id="contadorTexto"></span>
+      <span id="contadorTexto" style="display:block;margin-top:4px;"></span>
     </div>
 
     <div id="alertaExceso" class="alerta-exceso"></div>
+
+    <div id="resumenSemana" class="tabla-resumen"></div>
 
     <p class="firma"><a href="https://x.com/Guillogo_" target="_blank">hecho por Guillogo</a></p>
   </div>
 
   <script>
+    const STORAGE_KEY = 'jornadaGuillogoEstado';
     let ultimaEntradaHoyMin = null;
     let ultimaSugerenciaHoyMin = null;
     let contadorInterval = null;
+    let ultimoObjetivoSemanalMin = null;
+    let ultimoAcumuladoHastaAyerMin = null;
 
     function parseTime(value) {
       if (!value) return null;
@@ -290,14 +369,71 @@
       return minutesToHM(mod);
     }
 
+    function actualizarProgreso(totalMin, objetivoMin) {
+      const barra = document.getElementById('progresoBarraInner');
+      const porcentajeSpan = document.getElementById('progresoPorcentaje');
+      const detalle = document.getElementById('progresoDetalle');
+      if (!barra || !porcentajeSpan || !detalle || !objetivoMin || objetivoMin <= 0) return;
+
+      const progreso = Math.max(0, Math.min(1, totalMin / objetivoMin));
+      const porcentaje = Math.round(progreso * 100);
+      barra.style.width = porcentaje + '%';
+      porcentajeSpan.textContent = porcentaje + '%';
+      detalle.textContent = `${minutesToHM(totalMin)} / ${minutesToHM(objetivoMin)} hs acumuladas (reales o estimadas hasta hoy).`;
+    }
+
+    function guardarEstado() {
+      try {
+        const minimo = document.getElementById('minimoDiario').value;
+        const dias = [];
+        for (let i = 1; i <= 5; i++) {
+          dias.push({
+            trabaja: document.getElementById('trabaja' + i).checked,
+            entrada: document.getElementById('entrada' + i).value,
+            salida: document.getElementById('salida' + i).value
+          });
+        }
+        const hoyRadio = document.querySelector('input[name="hoy"]:checked');
+        const indiceHoy = hoyRadio ? Number(hoyRadio.value) : null;
+        const payload = { minimo, dias, indiceHoy };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      } catch (e) {
+        console.log('No se pudo guardar el estado:', e);
+      }
+    }
+
+    function cargarEstado() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        if (data.minimo) document.getElementById('minimoDiario').value = data.minimo;
+        if (Array.isArray(data.dias)) {
+          for (let i = 1; i <= 5; i++) {
+            const d = data.dias[i - 1];
+            if (!d) continue;
+            document.getElementById('trabaja' + i).checked = !!d.trabaja;
+            document.getElementById('entrada' + i).value = d.entrada || '';
+            document.getElementById('salida' + i).value = d.salida || '';
+          }
+        }
+        if (data.indiceHoy) {
+          const radio = document.querySelector(`input[name="hoy"][value="${data.indiceHoy}"]`);
+          if (radio) radio.checked = true;
+        }
+      } catch (e) {
+        console.log('No se pudo cargar el estado:', e);
+      }
+    }
+
     function actualizarContador() {
-      const box = document.getElementById("contadorBox");
-      const texto = document.getElementById("contadorTexto");
-      const alertaExceso = document.getElementById("alertaExceso");
+      const box = document.getElementById('contadorBox');
+      const texto = document.getElementById('contadorTexto');
+      const alertaExceso = document.getElementById('alertaExceso');
 
       if (ultimaEntradaHoyMin == null || ultimaSugerenciaHoyMin == null) {
-        box.style.display = "none";
-        alertaExceso.style.display = "none";
+        box.style.display = 'none';
+        alertaExceso.style.display = 'none';
         return;
       }
 
@@ -307,38 +443,108 @@
       if (trabajadosHoy < 0) trabajadosHoy = 0;
 
       texto.textContent = `Llevás hoy: ${minutesToHM(trabajadosHoy)} (sugerido para hoy: ${minutesToHM(ultimaSugerenciaHoyMin)}).`;
-      box.style.display = "block";
+      box.style.display = 'block';
+
+      // actualizar progreso con horas reales de hoy
+      if (ultimoObjetivoSemanalMin != null && ultimoAcumuladoHastaAyerMin != null) {
+        const total = ultimoAcumuladoHastaAyerMin + trabajadosHoy;
+        actualizarProgreso(total, ultimoObjetivoSemanalMin);
+      }
 
       const exceso = trabajadosHoy - ultimaSugerenciaHoyMin;
       if (exceso > 5) { // más de 5 minutos por encima de lo sugerido
-        alertaExceso.style.display = "block";
+        alertaExceso.style.display = 'block';
         alertaExceso.textContent = `Atención: ya superaste lo sugerido para hoy por ${minutesToHM(exceso)}. Podés ir pensando en cerrar la jornada si las tareas lo permiten.`;
+
+        if ('Notification' in window && Notification.permission === 'granted') {
+          try {
+            new Notification('Jornada Guillogo', {
+              body: `Ya superaste lo sugerido para hoy por ${minutesToHM(exceso)}.`,
+              icon: 'icon-192.png'
+            });
+          } catch (e) {
+            console.log('No se pudo mostrar la notificación:', e);
+          }
+        }
       } else {
-        alertaExceso.style.display = "none";
-        alertaExceso.textContent = "";
+        alertaExceso.style.display = 'none';
+        alertaExceso.textContent = '';
       }
     }
 
     function iniciarContador() {
       if (contadorInterval) clearInterval(contadorInterval);
       if (ultimaEntradaHoyMin == null || ultimaSugerenciaHoyMin == null) return;
+
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission().catch(() => {});
+      }
+
       actualizarContador();
-      contadorInterval = setInterval(actualizarContador, 60000); // actualiza cada 60 segundos
+      contadorInterval = setInterval(actualizarContador, 60000); // cada 60 segundos
+    }
+
+    function construirResumenSemana(diasTrabajados, indiceHoy, minimoMin, sugeridoHoyMin) {
+      const cont = document.getElementById('resumenSemana');
+      if (!cont) return;
+
+      let html = '<table><thead><tr><th>Día</th><th>Estado</th><th>Horas</th></tr></thead><tbody>';
+      const nombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+
+      for (let i = 1; i <= 5; i++) {
+        const nombre = nombres[i - 1];
+        const trabaja = diasTrabajados.includes(i);
+        let estadoClass = 'estado-no';
+        let estadoTxt = 'No se trabaja';
+        let horasTxt = '-';
+
+        const ent = parseTime(document.getElementById('entrada' + i).value);
+        const sal = parseTime(document.getElementById('salida' + i).value);
+        const tieneRegistro = ent != null && sal != null && sal > ent;
+        let horasDia = tieneRegistro ? (sal - ent) : null;
+
+        if (!trabaja) {
+          // se mantiene estado por defecto
+        } else if (i < indiceHoy) {
+          if (horasDia != null) {
+            estadoClass = 'estado-real';
+            estadoTxt = 'Real';
+            horasTxt = minutesToHM(horasDia);
+          } else {
+            estadoClass = 'estado-real';
+            estadoTxt = 'Real (sin horario completo)';
+            horasTxt = '-';
+          }
+        } else if (i === indiceHoy) {
+          estadoClass = 'estado-sugerido';
+          estadoTxt = 'Sugerido hoy';
+          horasTxt = minutesToHM(sugeridoHoyMin);
+        } else {
+          estadoClass = 'estado-minimo';
+          estadoTxt = 'Previsto mínimo';
+          horasTxt = minutesToHM(minimoMin);
+        }
+
+        html += `<tr><td>${nombre}</td><td class="${estadoClass}">${estadoTxt}</td><td>${horasTxt}</td></tr>`;
+      }
+
+      html += '</tbody></table>';
+      cont.innerHTML = html;
     }
 
     function calcular() {
-      const alerta = document.getElementById("alerta");
-      const resultado = document.getElementById("resultado");
-      const alertaExceso = document.getElementById("alertaExceso");
-      const contadorBox = document.getElementById("contadorBox");
+      const alerta = document.getElementById('alerta');
+      const resultado = document.getElementById('resultado');
+      const alertaExceso = document.getElementById('alertaExceso');
+      const contadorBox = document.getElementById('contadorBox');
 
-      alerta.style.display = "none";
-      alerta.textContent = "";
-      resultado.style.display = "none";
-      resultado.textContent = "";
-      alertaExceso.style.display = "none";
-      alertaExceso.textContent = "";
-      contadorBox.style.display = "none";
+      alerta.style.display = 'none';
+      alerta.textContent = '';
+      resultado.style.display = 'none';
+      resultado.textContent = '';
+      alertaExceso.style.display = 'none';
+      alertaExceso.textContent = '';
+      contadorBox.style.display = 'none';
       ultimaEntradaHoyMin = null;
       ultimaSugerenciaHoyMin = null;
       if (contadorInterval) {
@@ -346,37 +552,37 @@
         contadorInterval = null;
       }
 
-      const minimoHoras = Number(document.getElementById("minimoDiario").value || 0);
+      const minimoHoras = Number(document.getElementById('minimoDiario').value || 0);
       if (!minimoHoras || minimoHoras <= 0) {
-        alerta.style.display = "block";
-        alerta.textContent = "Indicá un mínimo diario de horas válido (mayor a 0).";
+        alerta.style.display = 'block';
+        alerta.textContent = 'Indicá un mínimo diario de horas válido (mayor a 0).';
         return;
       }
       const minimoMin = minimoHoras * 60;
 
       const diasTrabajados = [];
       for (let i = 1; i <= 5; i++) {
-        if (document.getElementById("trabaja" + i).checked) {
+        if (document.getElementById('trabaja' + i).checked) {
           diasTrabajados.push(i);
         }
       }
       if (diasTrabajados.length === 0) {
-        alerta.style.display = "block";
-        alerta.textContent = "Marcá al menos un día como trabajado.";
+        alerta.style.display = 'block';
+        alerta.textContent = 'Marcá al menos un día como trabajado.';
         return;
       }
 
       const hoyRadio = document.querySelector('input[name="hoy"]:checked');
       if (!hoyRadio) {
-        alerta.style.display = "block";
-        alerta.textContent = "Marcá qué día es 'hoy'.";
+        alerta.style.display = 'block';
+        alerta.textContent = 'Marcá qué día es "hoy".';
         return;
       }
 
       const indiceHoy = Number(hoyRadio.value);
-      if (!document.getElementById("trabaja" + indiceHoy).checked) {
-        alerta.style.display = "block";
-        alerta.textContent = "El día marcado como 'hoy' debe estar también marcado como trabajado.";
+      if (!document.getElementById('trabaja' + indiceHoy).checked) {
+        alerta.style.display = 'block';
+        alerta.textContent = 'El día marcado como "hoy" debe estar también marcado como trabajado.';
         return;
       }
 
@@ -385,26 +591,26 @@
       let acumuladoHastaAyer = 0;
       diasTrabajados.forEach(i => {
         if (i < indiceHoy) {
-          const ent = parseTime(document.getElementById("entrada" + i).value);
-          const sal = parseTime(document.getElementById("salida" + i).value);
+          const ent = parseTime(document.getElementById('entrada' + i).value);
+          const sal = parseTime(document.getElementById('salida' + i).value);
           if (ent != null && sal != null && sal > ent) {
             acumuladoHastaAyer += (sal - ent);
           }
         }
       });
 
-      const entradaHoy = parseTime(document.getElementById("entrada" + indiceHoy).value);
+      const entradaHoy = parseTime(document.getElementById('entrada' + indiceHoy).value);
       if (entradaHoy == null) {
-        alerta.style.display = "block";
-        alerta.textContent = "Ingresá al menos la hora de entrada de hoy en el día marcado como 'hoy'.";
+        alerta.style.display = 'block';
+        alerta.textContent = 'Ingresá al menos la hora de entrada de hoy en el día marcado como "hoy".';
         return;
       }
 
       let faltanteTeorico = objetivoSemanalMin - acumuladoHastaAyer;
-      let mensajeExtra = "";
+      let mensajeExtra = '';
 
       if (faltanteTeorico <= 0) {
-        mensajeExtra = "Ya cumpliste o superaste el objetivo semanal solo con los días anteriores. Aun así, se respeta el mínimo diario para hoy.";
+        mensajeExtra = 'Ya cumpliste o superaste el objetivo semanal solo con los días anteriores. Aun así, se respeta el mínimo diario para hoy.';
         faltanteTeorico = 0;
       }
 
@@ -421,7 +627,7 @@
         if (requeridoHoy <= minimoMin) {
           sugeridoHoyMin = minimoMin;
         } else {
-          sugeridoHoyMin = requeridoHoy; // concentramos el extra en hoy para dejar últimos días livianos
+          sugeridoHoyMin = requeridoHoy; // concentrar extra en hoy
         }
       }
 
@@ -429,6 +635,8 @@
 
       ultimaEntradaHoyMin = entradaHoy;
       ultimaSugerenciaHoyMin = sugeridoHoyMin;
+      ultimoObjetivoSemanalMin = objetivoSemanalMin;
+      ultimoAcumuladoHastaAyerMin = acumuladoHastaAyer;
 
       const textoResultado =
         `Objetivo semanal (según días trabajados): ${minutesToHM(objetivoSemanalMin)}
@@ -443,15 +651,29 @@
         `Hora de salida estimada hoy: ${buildHoraSalidaStr(horaSalidaHoy)}` +
         (mensajeExtra ? `
 
-Nota: ${mensajeExtra}` : "");
+Nota: ${mensajeExtra}` : '');
 
-      resultado.style.display = "block";
+      resultado.style.display = 'block';
       resultado.textContent = textoResultado;
 
+      // progreso usando horas hasta ayer (base) + mínimo de hoy por ahora
+      actualizarProgreso(acumuladoHastaAyer, objetivoSemanalMin);
+
+      // resumen semanal
+      construirResumenSemana(diasTrabajados, indiceHoy, minimoMin, sugeridoHoyMin);
+
+      // guardar estado para próxima vez
+      guardarEstado();
+
+      // iniciar contador en vivo
       iniciarContador();
     }
 
-    // Registro básico de Service Worker para PWA (requiere archivo sw.js en la misma carpeta)
+    document.addEventListener('DOMContentLoaded', () => {
+      cargarEstado();
+    });
+
+    // Registro básico de Service Worker para PWA
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js').catch(err => {
